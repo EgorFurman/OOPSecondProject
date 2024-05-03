@@ -9,6 +9,12 @@ class Cell:
     def __init__(self):
         self.value = 0
 
+    def is_empty(self):
+        return self.value == 0
+
+    def is_field(self):
+        return self.value != 0
+
     def __bool__(self) -> bool:
         return not self.value
 
@@ -37,7 +43,7 @@ class TicTacToe:
     is_draw = BoolDescriptor()
 
     def __init__(self):
-        self.pole = tuple(tuple(Cell() for _ in range(3)) for _ in range(3))
+        self.__pole = tuple(tuple(Cell() for _ in range(3)) for _ in range(3))
 
         self.is_human_win = False
         self.is_computer_win = False
@@ -47,25 +53,25 @@ class TicTacToe:
         row, col = item
         self.__verify_indices(row, col)
 
-        return self.pole[row][col].value
+        return self.__pole[row][col].value
 
     def __setitem__(self, key, value):
         row, col = key
         self.__verify_indices(row, col)
 
-        self.pole[row][col].value = value
+        self.__pole[row][col].value = value
 
         columns = self.__get_columns()
 
         self.is_human_win = any(all(cell.value == self.HUMAN_X for cell in line) for line in columns)
         self.is_computer_win = any(all(cell.value == self.COMPUTER_O for cell in line) for line in columns)
-        self.is_draw = not self.is_human_win and not self.is_computer_win and not any(cell for cell in chain(*self.pole))
+        self.is_draw = not self.is_human_win and not self.is_computer_win and not any(cell for cell in chain(*self.__pole))
 
     def __bool__(self):
         return not (self.is_human_win or self.is_computer_win or self.is_draw)
 
     def init(self) -> None:
-        for cell in chain(*self.pole):
+        for cell in chain(*self.__pole):
             cell.value = self.FREE_CELL
 
         self.is_human_win = False
@@ -74,10 +80,10 @@ class TicTacToe:
 
     def show(self) -> None:
         # Выводим верхнюю горизонтальную линию
-        print("    " + "   ".join(str(i + 1) for i in range(len(self.pole))))
-        print("  " + "┌───" * (len(self.pole)) + "┐")
+        print("    " + "   ".join(str(i + 1) for i in range(len(self.__pole))))
+        print("  " + "┌───" * (len(self.__pole)) + "┐")
 
-        for i, row in enumerate(self.pole):
+        for i, row in enumerate(self.__pole):
             # Выводим индекс строки
             print("{} │".format(i + 1), end="")
 
@@ -87,11 +93,11 @@ class TicTacToe:
             print()
 
             # Выводим горизонтальные разделители между строками
-            if i < len(self.pole) - 1:
-                print("  " + "├───" * (len(self.pole)) + "┤")
+            if i < len(self.__pole) - 1:
+                print("  " + "├───" * (len(self.__pole)) + "┤")
 
         # Выводим нижнюю горизонтальную линию
-        print("  " + "└───" * (len(self.pole)) + "┘")
+        print("  " + "└───" * (len(self.__pole)) + "┘")
 
     def human_go(self):
         self[self.__get_user_step()] = self.HUMAN_X
@@ -123,7 +129,7 @@ class TicTacToe:
                             all(cell.value == self.COMPUTER_O for cell in line) for line in columns)
                         return
 
-        if self.pole[1][1]:
+        if self.__pole[1][1]:
             self[1, 1] = self.COMPUTER_O
             return
 
@@ -163,16 +169,16 @@ class TicTacToe:
             raise IndexError('Клетка с указанными индексами не существует.')
 
     def __get_columns(self) -> tuple:
-        row1, row2, row3 = (row for row in self.pole)
-        col1, col2, col3 = (tuple(row[i] for row in self.pole) for i in range(3))
-        main_dig, side_dig = tuple(self.pole[i][i] for i in range(3)), tuple(self.pole[i][-1 - i] for i in range(3))
+        row1, row2, row3 = (row for row in self.__pole)
+        col1, col2, col3 = (tuple(row[i] for row in self.__pole) for i in range(3))
+        main_dig, side_dig = tuple(self.__pole[i][i] for i in range(3)), tuple(self.__pole[i][-1 - i] for i in range(3))
         return row1, row2, row3, col1, col2, col3, main_dig, side_dig
 
     def __is_free_cell(self, row: int, col: int) -> bool:
-        return bool(self.pole[row][col])
+        return self.__pole[row][col].is_empty()
 
     @staticmethod
-    def __is_game_cell_coordinates(row: Any, col: Any) -> bool:
+    def __is_game_cell_coordinates(row: int, col: int) -> bool:
         return (type(row) is int and type(col) is int) and row in range(3) and col in range(3)
 
 
