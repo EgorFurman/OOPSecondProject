@@ -1,4 +1,4 @@
-from random import randint, shuffle
+from random import randint, shuffle, choice
 from itertools import chain
 
 
@@ -51,13 +51,13 @@ class TicTacToe:
 
     def __getitem__(self, item):
         row, col = item
-        self.__verify_indices(row, col)
+        self.__verify_coords(row, col)
 
         return self.__pole[row][col].value
 
     def __setitem__(self, key, value):
         row, col = key
-        self.__verify_indices(row, col)
+        self.__verify_coords(row, col)
 
         self.__pole[row][col].value = value
 
@@ -74,8 +74,8 @@ class TicTacToe:
             step_game += 1
 
             if self.__is_win():
-                self.is_human_win = self.__is_human_win()
-                self.is_computer_win = self.__is_computer_win()
+                self.is_human_win = self.__is_winner(player_sign=self.HUMAN_X)
+                self.is_computer_win = not self.is_human_win
             self.is_draw = self.__is_draw()
 
         self.show()
@@ -120,7 +120,7 @@ class TicTacToe:
 
             try:
                 step = tuple(map(lambda x: int(x.strip()) - 1, res.split(',')))
-                self.__verify_indices(*step)
+                self.__verify_coords(*step)
                 if not self[*step] == self.FREE_CELL:
                     raise IndexError('Указанная клетка уже занята.')
             except IndexError as ex:
@@ -131,7 +131,7 @@ class TicTacToe:
                 continue
             return step
 
-    def computer_go(self) -> None:
+    def __try_grab_victory(self) -> bool:
         angle_cells = [(0, 0), (0, 2), (2, 0), (2, 2)]
         shuffle(angle_cells)
 
@@ -142,8 +142,10 @@ class TicTacToe:
                 for cell in column:
                     if cell.is_empty():
                         cell.value = self.COMPUTER_O
-                        return
+                        return True
+        return False
 
+    def __try_block_human(self) -> bool:
         for column in self.__lines:
             filled_cells = list(filter(lambda cell: cell.is_field(), column))
 
@@ -151,39 +153,59 @@ class TicTacToe:
                 for cell in column:
                     if cell.is_empty():
                         cell.value = self.COMPUTER_O
-                        return
+                        return True
+        return False
 
+    def __try_occupy_center(self) -> bool:
         if self[1, 1] == self.FREE_CELL:
             self[1, 1] = self.COMPUTER_O
-            return
+            return True
+        return False
+
+    def __try_occupy_corner(self) -> bool:
+        angle_cells = [(0, 0), (0, 2), (2, 0), (2, 2)]
+        shuffle(angle_cells)
 
         for row, col in angle_cells:
             if self[row, col] == self.FREE_CELL:
                 self[row, col] = self.COMPUTER_O
-                return
+                return True
+            return False
 
+    def __try_occupy_random_free_cell(self) -> bool:
         while True:
             row, col = randint(0, 2), randint(0, 2)
             if self[row, col] == self.FREE_CELL:
                 self[row, col] = self.COMPUTER_O
-                return
+                return True
+            return False
 
-    def __is_computer_win(self) -> bool:
-        return not self.__is_human_win()
+    def computer_go(self):
+        if self.__try_grab_victory():
+            return
+        elif self.__try_block_human():
+            return
+        elif self.__try_occupy_center():
+            return
+        elif self.__try_occupy_corner():
+            return
+        else:
+            self.__try_occupy_random_free_cell()
 
-    def __is_human_win(self) -> bool:
+    def __is_win(self) -> bool:
+        return any(all(c.is_field() and c.value == line[0].value for c in line) for line in self.__lines)
+
+    def __is_winner(self, player_sign) -> bool:
         for line in self.__lines:
-            if all(cell.is_field() for cell in line):
-                return all(cell.value == self.HUMAN_X for cell in line)
-
-    def __is_win(self):
-        return any(all(c.value != self.FREE_CELL and c.value == line[0].value for c in line) for line in self.__lines)
+            if all(cell.value == player_sign for cell in line):
+                return True
+        return False
 
     def __is_draw(self):
         return all(cell.is_field() for cell in chain(*self.__pole))
 
-    def __verify_indices(self, row: int, col: int) -> None:
-        if not self.__is_game_cell_coordinates(row, col):
+    def __verify_coords(self, row: int, col: int) -> None:
+        if not (self.__is_valid_coord(row) and self.__is_valid_coord(col)):
             raise IndexError('Клетка с указанными индексами не существует.')
 
     def __get_lines(self) -> tuple:
@@ -193,8 +215,8 @@ class TicTacToe:
         return row1, row2, row3, col1, col2, col3, main_dig, side_dig
 
     @staticmethod
-    def __is_game_cell_coordinates(row: int, col: int) -> bool:
-        return (type(row) is int and type(col) is int) and row in range(3) and col in range(3)
+    def __is_valid_coord(coord: int) -> bool:
+        return type(coord) is int and coord in range(3)
 
 
 if __name__ == '__main__':
